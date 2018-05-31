@@ -7,7 +7,7 @@ scenario_range = ["low", "avg", 'high']
 processes = ["electricity_credit", "Farming", "Transportation", "Petroleum", "Electricity", "Chemicals_And_Fertilizers", "Direct", "Other"]
 sections = ["Feedstock_Supply_Logistics", "Feedstock_Handling_and_Preparation", "IL_Pretreatment",
 			"Enzymatic_Hydrolysis_and_Fermentation", "Recovery_and_Separation", "Hydrogeneration_and_Oligomerization",
-			"Wastewater_Treatment", "Lignin_Utilization"]
+			"Wastewater_Treatment", "Lignin_Utilization", "Direct_Water"]
 energy_content_path = "unit_conversions_and_mw/energy_content_by_mass_and_volume.csv"
 fuel_aliases_path = "unit_conversions_and_mw/fuel_aliases.csv"
 co2_filepath = "io_tables/impact_vectors/co2_impact.csv"

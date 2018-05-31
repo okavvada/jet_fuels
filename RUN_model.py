@@ -5,13 +5,19 @@ from Final_Impact_Model import FinalImpactModel
 
 parser=argparse.ArgumentParser()
 
+parser.add_argument('--input_path', help='Set the input data path')
+parser.add_argument('--output_path', help='Set the output data path')
+parser.add_argument('--fuel', choices=['1,8-cineole', 'Bisabolene', 'Epi-isozizaene', 'Limonene', 'Linalool','Isopentenol'], help='Select your jetfuel')
 parser.add_argument('--electricity', choices=['grid','net'], help='Select your electricity source')
 parser.add_argument('--optimal', choices=['True','False'], help='Select scenario')
+parser.add_argument('--model', choices=['GHG','WithWater','ConsWater'], help='Select GHG or Water run')
 
 args=parser.parse_args()
 
-if not os.path.exists('results'):
-    os.makedirs('results')
+if not os.path.exists(args.output_path):
+    os.makedirs(args.output_path)
+
+fuels = [args.fuel]
 
 if args.optimal=='True':
     processes = ['Optimal']
@@ -28,13 +34,14 @@ if args.electricity=='grid':
 	cred = False
 else:
 	cred = True
-fuels = ['1,8-cineole', 'Bisabolene', 'Epi-isozizaene', 'Limonene', 'Linalool']
 
 titles = ["Feedstock_Supply_Logistics", "Feedstock_Handling_and_Preparation", "IL_Pretreatment",
 			"Enzymatic_Hydrolysis_and_Fermentation", "Recovery_and_Separation", "Hydrogeneration_and_Oligomerization",
-			"Wastewater_Treatment", "Lignin_Utilization"]
+			"Wastewater_Treatment", "Lignin_Utilization", "Credits"]
 columns = titles[:]
 columns.append("Scerario_Name")
+
+button = 'button' + args.model
 
 catalysts = {
             "alcl3": 1.91,
@@ -62,26 +69,35 @@ for process in processes:
             if fuel == 'Linalool': 
                 hhv_jet_fuel = 42.18
                 density_jet_fuel = 0.858
+            if fuel == 'Isopentenol': 
+                hhv_jet_fuel = 37.3
+                density_jet_fuel = 0.81
             for scenario in scenarios:
                 if args.optimal == 'False':
-                    path = 'static/scenarios/SuperPro_data_{}_{}_{}_{}.js'.format(process, IL, fuel, scenario)
+                    path = args.input_path + '/scenarios/SuperPro_data_{}_{}_{}_{}.js'.format(process, IL, fuel, scenario)
+                    if not os.path.exists(path):
+                        continue
                 else:
-                    path = 'static/optimal/SuperPro_data_{}_{}_{}.js'.format(process, fuel, scenario)
+                    path = args.input_path + '/optimal/SuperPro_data_{}_{}_{}.js'.format(process, fuel, scenario)
+                    if not os.path.exists(path):
+                        continue
                 data = json.load(open(path))
                 if IL == 'Cholinium lysinate':
                     ionic_liquid = 'ChLys'
                 if IL == 'Ethanolamine acetate':
                     ionic_liquid = 'EMIM'
-                result = FinalImpactModel(data, 'sorghum', 'buttonGHG', 'jet_fuel', catalysts, fuel, ionic_liquid, credits=cred)*1000/hhv_jet_fuel
+                result = FinalImpactModel(data, 'sorghum', button, 'jet_fuel', fuel, ionic_liquid, credits=cred)
                 result['Scerario_Name'] = '{}_{}_{}_{}'.format(process, IL, fuel, scenario)
                 all_results = all_results.append(result)
-
 sum_cols = titles[:]
-if args.electricity == 'net':
-	sum_cols.append('electricity_requirements')
-all_results['Total_gCO2_MJ'] = all_results[sum_cols].sum(axis=1)
-all_results['Total_gCO2_MJ_net'] = all_results['Total_gCO2_MJ'] + all_results['electricity_generated'] + all_results['steam_credits']
+if args.model == 'GHG':
+    if args.electricity == 'net':
+    	sum_cols.append('electricity_requirements')
+    all_results['Total_gCO2_MJ'] = all_results[sum_cols].sum(axis=1)
+    all_results['Total_gCO2_MJ_net'] = all_results['Total_gCO2_MJ'] + all_results['electricity_generated'] + all_results['steam_credits']
+else:
+    all_results['Total_liters_MJ'] = all_results[sum_cols].sum(axis=1)
 
 final = all_results.set_index('Scerario_Name')
-final.to_csv('results/LCA_results_{}_{}.csv'.format(opt, args.electricity))
+final.to_csv(args.output_path + '/LCA_results_{}_{}_{}.csv'.format(opt, args.electricity, args.model))
 

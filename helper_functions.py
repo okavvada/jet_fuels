@@ -5,7 +5,7 @@ import parameters as P
 
 def csv_dict_list(variables_file):
     mydict = {}
-    reader = csv.reader(open(variables_file, "rb"))
+    reader = csv.reader(open(variables_file, "rU"))
     for i, rows in enumerate(reader):
         if i == 0: continue
         k = rows[0]
@@ -130,7 +130,7 @@ def CooledWaterCO2kg(cooled_type):
     
     # Numeric coefficients carbon emissions per L of water
     waters = {
-        'cooling_water': 0.00024 *0.45,
+        'cooling_water': 0.00024,
         'chilled_water': 0.00046,
         'cooling_water25': 0.00024,
         'steam_low': 0.32,
@@ -253,6 +253,9 @@ def TotalWaterImpacts(io_data, y, water_consumption, biorefinery_direct_consumpt
 
 
 def AggregateResults(m, results_kg_co2e, selectivity, fuel):
-    m['All'][selectivity] = sum(results_kg_co2e.values())
+    value = sum(results_kg_co2e.values())
+    if  10**(-10) > value > -10**(-10):
+        value = 0
+    m['All'][selectivity] = value
 
 

@@ -47,7 +47,6 @@ SuperPro_names = {
     "Stover": "feedstock.kg",
     "WWT nutrients": "caoh.kg",
     "Sulfuric Acid": "acid.kg",
-    "Water": "water_direct_consumption",
     "Hydrogen": "h2.kg",
     "Inoculum": "inoculum.kg",
     "CIP2": "cip2.kg",
@@ -103,6 +102,12 @@ electricity_generated = {
             'CY_ICR': 466171200 ,
             'TY_ICR': 434491200,
             'OP_ICR': 382852800,
+            },
+        'Isopentenol': {
+            'BY_ICR': 445024800,
+            'CY_ICR': 447480000 ,
+            'TY_ICR': 423720000,
+            'OP_ICR': 174556800,
             }
         },
     'Microaerobic':{
@@ -135,6 +140,12 @@ electricity_generated = {
             'CY_ICR': 220888800 ,
             'TY_ICR': 196574400,
             'OP_ICR': 382852800,
+            },
+        'Isopentenol': {
+            'BY_ICR': 227224800 ,
+            'CY_ICR': 229680000 ,
+            'TY_ICR': 206474400,
+            'OP_ICR': 174556800,
             }
         }}
 
@@ -165,6 +176,12 @@ steam_generated = {
         	'CY_ICR': 2796186017,
         	'TY_ICR': 2796186017,
         	'OP_ICR': 2484155520},
+        'Isopentenol': {
+            'BY_ICR': 2447898229 ,
+            'CY_ICR': 2463713462 ,
+            'TY_ICR': 2329123280,
+            'OP_ICR': 1721677824,
+            }
         },
     'Microaerobic':{
         '1,8-cineole': {
@@ -187,9 +204,38 @@ steam_generated = {
         	'BY_ICR': 1813018205,
         	'CY_ICR': 1813018205,
         	'TY_ICR': 1813018205},
+        'Isopentenol': {
+            'BY_ICR': 1992533057 ,
+            'CY_ICR': 2017116757 ,
+            'TY_ICR': 1810430061,
+            'OP_ICR': 1721677824,
+            }
         },
         }
 
+water_required = {
+        '1,8-cineole': {
+                'water_direct_consumption': 24.55,
+                'water_direct_withdrawal': 32.24
+                },
+        'Bisabolene':  {
+                'water_direct_consumption': 25.82,
+                'water_direct_withdrawal': 37.74
+                },
+        'Epi-isozizaene': {
+                'water_direct_consumption': 25.83,
+                'water_direct_withdrawal': 37.75
+                },
+        'Limonene': {
+                'water_direct_consumption': 25.90,
+                'water_direct_withdrawal': 36.45
+                },
+        'Linalool': {
+                'water_direct_consumption': 25.66,
+                'water_direct_withdrawal': 33.44
+                },
+        }
+    
 
 def getValueUnitIndex(results, worksheet, title):
     for row, heading in enumerate(worksheet.col_values(1)):
@@ -229,6 +275,13 @@ def getMaterialsPerSection(results, worksheet, section):
                     value_sum += amount
                 values = [value_sum,worksheet.cell(rows, 3).value]
                 results[section].update({'Stover':values})
+                for rows in np.arange(pretreat_end_row-1, pretreat_end_row):
+                    water_amount = worksheet.cell(rows, 2).value
+                    if (isinstance(water_amount, numbers.Number) == False) and (',' in water_amount):
+                        water_amount = water_amount.replace(',','')
+                    water_amount = float(water_amount)
+                    water_values = [water_amount,worksheet.cell(rows, 3).value]
+                    results[section].update({'Water':water_values})
             else:
                 for rows in np.arange(pretreat_start_row+2, pretreat_end_row):
                     values = [worksheet.cell(rows, 2).value,worksheet.cell(rows, 3).value]
@@ -356,12 +409,19 @@ def getElectricityGenerated(jet_name, scenarios, process, fuel_kg):
 def getSteamGenerated(jet_name, scenarios, process, fuel_kg):
     return steam_generated[process][jet_name][scenarios]/fuel_kg
 
+def getWaterRequired(jet_name, scenarios, process, fuel_kg):
+    water_consumed = water_required[jet_name]['water_direct_consumption']
+    water_withdrawal = water_required[jet_name]['water_direct_withdrawal']
+    return water_consumed, water_withdrawal
+
 
 def SuperPro_translate(path, feedstock, fuel_name, preprocess, jet_name, scenarios, process):
     workbook = xlrd.open_workbook(path)
     worksheet = workbook.sheet_by_index(0)
     result_units = {}
     results = {}
+    water_consumed = 0
+    water_withdrawal = 0
 
     if fuel_name == 'ethanol':
         getValueUnitIndex(results, worksheet, 'Bulk Material')
@@ -402,6 +462,9 @@ def SuperPro_translate(path, feedstock, fuel_name, preprocess, jet_name, scenari
         if jet_name == 'Linalool': 
             hhv_jet_fuel = 42.18
             density_jet_fuel = 0.858
+        if jet_name == 'Isopentenol': 
+            hhv_jet_fuel = 37.3
+            density_jet_fuel = 0.81
 
         jet_fuel = getJetFuelProduced(worksheet)
         fuel_kg = convertToKg(jet_fuel, fuel_name, density_jet_fuel)
@@ -447,13 +510,24 @@ def SuperPro_translate(path, feedstock, fuel_name, preprocess, jet_name, scenari
                 result = value / (fuel_kg)
             if key == 'octane_ltr':
                 result = value / fuel_l
-            if key == 'water_direct_consumption':
+            if (key == 'Water') and ((sector == 'Pretreatment') or (sector == 'Hydrolysis and fermentation')):
+                water_consumed += value / fuel_kg
+                water_withdrawal += value / fuel_kg * 0.13
+                continue
+            if (key == 'Water') and (sector == 'Feedstock supply logistics'):
+                water_withdrawal += value / fuel_kg * 0.13
+                continue
+            elif (key == 'Water'):
+                continue
+            if (key == 'cooling_water'):
+                result = value / fuel_kg * 0.45
+                water_withdrawal += result * 0.01
+            if (key == 'cooling_water25'):
                 result = value / fuel_kg
-                process_results.update({'water_direct_withdrawal':result})
-            if (key == 'cooling_water') or (key == 'cooling_water25'):
-                result = value / fuel_kg
+                water_withdrawal += result * 0.01
             if key == 'chilled_water':
                 result = value / fuel_kg
+                water_withdrawal += result * 0.01
             if key == 'inoculum.kg':
                 result = value / fuel_kg
             if key == 'cip2.kg':
@@ -468,6 +542,7 @@ def SuperPro_translate(path, feedstock, fuel_name, preprocess, jet_name, scenari
                 result = value / fuel_kg
             if 'Steam' in key:
                 result = value / fuel_kg
+                water_withdrawal += result * 0.13
                 temp = key.replace('Steam', '')
                 temp = int(temp.replace('C', ''))
                 if temp < 300:
@@ -492,11 +567,16 @@ def SuperPro_translate(path, feedstock, fuel_name, preprocess, jet_name, scenari
         output = {}
         electricity_generated = getElectricityGenerated(jet_name, scenarios, process, fuel_kg)
         steam_generated = getSteamGenerated(jet_name, scenarios, process, fuel_kg)
+        # water_consumed, water_withdrawal = getWaterRequired(jet_name, scenarios, process, fuel_kg)
+
         for key in final_results.keys():
             output.update({sections_translate[key]:final_results[key]})
-        output.update({'credits':{}})  
-        output['credits'].update({'electricity_generated':electricity_generated})
-        output['credits'].update({'steam_generated':steam_generated})
+        output.update({'Credits':{}})
+        output.update({'Direct_Water':{}})  
+        output['Credits'].update({'electricity_generated':electricity_generated})
+        output['Credits'].update({'steam_generated':steam_generated})
+        output['Direct_Water'].update({'water_direct_consumption':water_consumed,
+                                        'water_direct_withdrawal':water_withdrawal})
         #output.update({'fuel_kg':fuel_kg})
 
 
