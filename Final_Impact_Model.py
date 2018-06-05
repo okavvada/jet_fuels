@@ -255,7 +255,7 @@ def FinalImpactModel(SP_params, feedstock, model, fuel, typefuel, ionic_liquid='
             if fuel == 'ethanol':
                 m[selectivity] = m[selectivity]/hhv_fuel # converting kg per kg results to g per MJ
             else:
-                m['All'][selectivity] = m['All'][selectivity]/hhv_fuel # converting kg per kg results to g per MJ
+                m['All'][selectivity] = m['All'][selectivity]
 
         elif model == 'buttonWithWater':
             if 'water_direct_withdrawal' in SP_params[selectivity]:
@@ -273,7 +273,7 @@ def FinalImpactModel(SP_params, feedstock, model, fuel, typefuel, ionic_liquid='
             if fuel == 'ethanol':
                 m[selectivity] = m[selectivity]/hhv_fuel # converting kg per kg results to g per MJ
             else:
-                m['All'][selectivity] = m['All'][selectivity]/hhv_fuel # converting kg per kg results to g per MJ
+                m['All'][selectivity] = m['All'][selectivity]
 
 
     if fuel == 'ethanol':
@@ -288,15 +288,15 @@ def FinalImpactModel(SP_params, feedstock, model, fuel, typefuel, ionic_liquid='
             y_net.update({item:0})
             y_cred.update({item:0})
 
+        y["electricity.{}.kWh".format(SP_params['analysis_params']['facility_electricity'])] = (
+                                                    required_electricity)
+        y_net["electricity.{}.kWh".format(SP_params['analysis_params']['facility_electricity'])] = -(
+                                                    SP_params['analysis_params']['electricity_credits'])
+        y_cred["electricity.{}.kWh".format(SP_params['analysis_params']['facility_electricity'])] = (np.where(
+                                                    (required_electricity - SP_params['analysis_params']['electricity_credits'])<=0, 
+                                                    required_electricity - SP_params['analysis_params']['electricity_credits'],
+                                                    0))
         if model == 'buttonGHG':
-            y["electricity.{}.kWh".format(SP_params['analysis_params']['facility_electricity'])] = (
-                                                        required_electricity)
-            y_net["electricity.{}.kWh".format(SP_params['analysis_params']['facility_electricity'])] = -(
-                                                        SP_params['analysis_params']['electricity_credits'])
-            y_cred["electricity.{}.kWh".format(SP_params['analysis_params']['facility_electricity'])] = (np.where(
-                                                        (required_electricity - SP_params['analysis_params']['electricity_credits'])<=0, 
-                                                        required_electricity - SP_params['analysis_params']['electricity_credits'],
-                                                        0))
             electricity_kg_co2e = hf.TotalGHGEmissions(io_data, y,
                                                        0, 0, 0, 0, SP_params['analysis_params']['time_horizon'])
             results_kg_co2e_net = hf.TotalGHGEmissions(io_data, y_net, 
@@ -316,8 +316,30 @@ def FinalImpactModel(SP_params, feedstock, model, fuel, typefuel, ionic_liquid='
             steam_credits = -(total_steam * hf.CooledWaterCO2kg('steam_low'))
             aggregated_data_avg['steam_credits'] = steam_credits
             aggregated_data_avg = aggregated_data_avg * 1000/hhv_fuel
-        else:
+
+        if (model == 'buttonConsWater'):
+            electricity_kg_co2e = hf.TotalWaterImpacts(io_data, y, 
+                                                         water_consumption, 0)
+            results_kg_co2e_net = hf.TotalWaterImpacts(io_data, y_net, 
+                                                         water_consumption, 0)
+            electricity_kg_co2e_req = electricity_kg_co2e.set_index('products')['liter_results_kg'].to_dict()
+            results_kg_co2e_dict_net = results_kg_co2e_net.set_index('products')['liter_results_kg'].to_dict()
             aggregated_data_avg = m.T
+            aggregated_data_avg['electricity_requirements'] = sum(electricity_kg_co2e_req.values())
+            aggregated_data_avg['electricity_generated'] = sum(results_kg_co2e_dict_net.values())
+            aggregated_data_avg = aggregated_data_avg/hhv_fuel
+
+        elif (model == 'buttonWithWater'):
+            electricity_kg_co2e = hf.TotalWaterImpacts(io_data, y, 
+                                                         water_withdrawal, 0)
+            results_kg_co2e_net = hf.TotalWaterImpacts(io_data, y_net, 
+                                                         water_withdrawal, 0)
+            electricity_kg_co2e_req = electricity_kg_co2e.set_index('products')['liter_results_kg'].to_dict()
+            results_kg_co2e_dict_net = results_kg_co2e_net.set_index('products')['liter_results_kg'].to_dict()
+            aggregated_data_avg = m.T
+            aggregated_data_avg['electricity_requirements'] = sum(electricity_kg_co2e_req.values())
+            aggregated_data_avg['electricity_generated'] = sum(results_kg_co2e_dict_net.values())
+            aggregated_data_avg = aggregated_data_avg/hhv_fuel
 
 
     aggregated_data_avg_plot = aggregated_data_avg[list(reversed(aggregated_data_avg.columns.values))]

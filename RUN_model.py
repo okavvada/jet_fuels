@@ -37,7 +37,7 @@ else:
 
 titles = ["Feedstock_Supply_Logistics", "Feedstock_Handling_and_Preparation", "IL_Pretreatment",
 			"Enzymatic_Hydrolysis_and_Fermentation", "Recovery_and_Separation", "Hydrogeneration_and_Oligomerization",
-			"Wastewater_Treatment", "Lignin_Utilization", "Credits"]
+			"Wastewater_Treatment", "Lignin_Utilization", "Credits", "Direct_Water"]
 columns = titles[:]
 columns.append("Scerario_Name")
 
@@ -90,13 +90,18 @@ for process in processes:
                 result['Scerario_Name'] = '{}_{}_{}_{}'.format(process, IL, fuel, scenario)
                 all_results = all_results.append(result)
 sum_cols = titles[:]
+
 if args.model == 'GHG':
     if args.electricity == 'net':
     	sum_cols.append('electricity_requirements')
     all_results['Total_gCO2_MJ'] = all_results[sum_cols].sum(axis=1)
     all_results['Total_gCO2_MJ_net'] = all_results['Total_gCO2_MJ'] + all_results['electricity_generated'] + all_results['steam_credits']
 else:
+    if args.electricity == 'net':
+        sum_cols.append('electricity_requirements')
     all_results['Total_liters_MJ'] = all_results[sum_cols].sum(axis=1)
+    all_results['Total_liters_MJ_net'] = all_results['Total_liters_MJ'] + all_results['electricity_generated']
+    # all_results['Total_liters_MJ'] = all_results[sum_cols].sum(axis=1)
 
 final = all_results.set_index('Scerario_Name')
 final.to_csv(args.output_path + '/LCA_results_{}_{}_{}.csv'.format(opt, args.electricity, args.model))

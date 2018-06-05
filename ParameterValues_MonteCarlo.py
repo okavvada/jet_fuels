@@ -55,6 +55,7 @@ class ParameterValues():
             impact_drop['electricity_requirements'] = impact['electricity_requirements']
         else:
             impact_drop = impact.copy()
+            impact_drop = impact_drop.drop(['electricity_requirements'], axis=1)
             impact_drop['Total_liters_MJ'] = impact_drop.sum(axis=1)
         return impact_drop
 
@@ -104,7 +105,8 @@ class ParameterValues():
                     impact_drop = impact.drop(['electricity_requirements', 'electricity_cred'], axis=1)
                     sum_impact = impact_drop.sum(axis=1)['All']
                 else:
-                    sum_impact = impact.sum(axis=1)['All']
+                    impact_drop = impact.drop(['electricity_requirements'], axis=1)
+                    sum_impact = impact_drop.sum(axis=1)['All']
                 results[section][item].update({'avg':sum_impact})
 
                 update_params[section][item] = value_low
@@ -113,7 +115,8 @@ class ParameterValues():
                     impact_drop = impact.drop(['electricity_requirements', 'electricity_cred'], axis=1)
                     sum_impact = impact_drop.sum(axis=1)['All']
                 else:
-                    sum_impact = impact.sum(axis=1)['All']
+                    impact_drop = impact.drop(['electricity_requirements'], axis=1)
+                    sum_impact = impact_drop.sum(axis=1)['All']
                 results[section][item].update({'low':sum_impact})
 
                 update_params[section][item] = value_high
@@ -122,7 +125,8 @@ class ParameterValues():
                     impact_drop = impact.drop(['electricity_requirements', 'electricity_cred'], axis=1)
                     sum_impact = impact_drop.sum(axis=1)['All']
                 else:
-                    sum_impact = impact.sum(axis=1)['All']
+                    impact_drop = impact.drop(['electricity_requirements'], axis=1)
+                    sum_impact = impact_drop.sum(axis=1)['All']
                 results[section][item].update({'high':sum_impact})
 
                 results[section][item].update({'minimum_value':value_low})
