@@ -9,7 +9,7 @@ parser.add_argument('--input_path', help='Set the input data path')
 parser.add_argument('--output_path', help='Set the output data path')
 parser.add_argument('--model', choices=['GHG','WithWater','ConsWater'], help='Select GHG or Water run')
 parser.add_argument('--risk', choices=['uncertainty','sensitivity'], help='Select risk analysis to run')
-parser.add_argument('--fuel', choices=['1,8-cineole', 'Bisabolene', 'Epi-isozizaene', 'Limonene', 'Linalool','Isopentenol'], help='Select your jetfuel')
+parser.add_argument('--fuel', choices=['1,8-cineole', 'Bisabolene', 'Epi-isozizaene', 'Limonene', 'Linalool','Isopentenol', 'All'], help='Select your jetfuel')
 
 args=parser.parse_args()
 
@@ -40,7 +40,8 @@ SuperPro_names = {
     "Cooling Water": "cooling_water",
     "CoolingWater25C": "cooling_water25",
     "Chilled Water": "chilled_water",
-    "electricity_generated": "electricity_generated"
+    "electricity_generated": "electricity_generated",
+    "steam_low":"steam_low"
 }
 
 sections_translate = {  "Feedstock supply logistics": "Feedstock_Supply_Logistics",
@@ -54,7 +55,10 @@ sections_translate = {  "Feedstock supply logistics": "Feedstock_Supply_Logistic
                         "Credits": "Credits",
                         "Direct_Water": "Direct_Water"}
 
-fuels = [args.fuel]
+if args.fuel == 'All':
+    fuels = ['1,8-cineole', 'Bisabolene', 'Epi-isozizaene', 'Limonene', 'Linalool']
+else:
+    fuels = [args.fuel]
 
 titles = ["Feedstock_Supply_Logistics", "Feedstock_Handling_and_Preparation", "IL_Pretreatment",
 			"Enzymatic_Hydrolysis_and_Fermentation", "Recovery_and_Separation", "Hydrogeneration_and_Oligomerization",
@@ -71,10 +75,13 @@ def convertDfToDict(data):
     for process in processes:
         new_process_name = sections_translate[process]
         d={}
+        steam_base = 0
+        steam_min = 0
+        steam_max = 0
+        steam_std = 0
         for i, row in grouped.get_group(process).iterrows():
             if 'Steam' in row['Material']:
                 new_material_name = 'steam_low'
-                
             elif row['Material'] not in SuperPro_names.keys():
                 new_material_name = row['Material']
             else:
@@ -84,6 +91,16 @@ def convertDfToDict(data):
                                               'Minimum': row['Minimum '],
                                              'Maximum': row['Maximum'],
                                              'Std_Dev': row['Std_Dev']}})
+            elif 'Steam' in row['Material']:
+                steam_base += row['Baseline']
+                steam_min += row['Minimum ']
+                steam_max += row['Maximum']
+                steam_std += row['Std_Dev']
+
+                d.update({new_material_name:{'Baseline': steam_base,
+                                              'Minimum': steam_min,
+                                             'Maximum': steam_max,
+                                             'Std_Dev': steam_std}})
             
             else:
                 d.update({new_material_name:{'Baseline': row['Baseline'],
@@ -100,7 +117,7 @@ else:
 
 if args.risk == 'sensitivity':
     for fuel in fuels:
-        data = pd.read_csv(data_path+'/Risk/{}.csv'.format(args.fuel))
+        data = pd.read_csv(data_path+'/Risk/{}.csv'.format(fuel))
         processes = list(data['Process'].unique())
         risk_params = convertDfToDict(data)
         path = args.input_path + '/scenarios/SuperPro_data_Aerobic_Cholinium lysinate_{}_BY_ICR.js'.format(fuel)
@@ -132,3 +149,5 @@ if args.risk == 'uncertainty':
             uncertain_df = Params.uncertainty(fuel, 'ChLys', button)
             final_df = final_df.append(uncertain_df)
         final_df.to_csv(args.output_path + '/uncertainty_{}_{}.csv'.format(fuel, args.model))
+
+

@@ -216,6 +216,8 @@ def FinalImpactModel(SP_params, feedstock, model, fuel, typefuel, ionic_liquid='
                y['char.MJ'] = SP_params[selectivity]['PdAC_catalyst.kg'] * 27
 
         if model == 'buttonGHG':
+            steam_ghg = 0
+            total_steam = 0
 
             results_kg_co2e = hf.TotalGHGEmissions(io_data, y,
                                                    biorefinery_direct_ghg, cooled_water_ghg, steam_ghg, catalyst_ghg, SP_params['analysis_params']['time_horizon'])

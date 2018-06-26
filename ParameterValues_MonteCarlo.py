@@ -49,6 +49,7 @@ class ParameterValues():
                         self.new_params[section][item] = new_value
 
         impact = FinalImpactModel(self.new_params, 'sorghum', model, 'jet_fuel', fuel, ionic_liquid, credits=False)
+
         if model == 'buttonGHG':
             impact_drop = impact.drop(['electricity_requirements', 'electricity_cred'], axis=1)
             impact_drop['Total_gCO2_MJ_net'] = impact_drop.sum(axis=1)['All']

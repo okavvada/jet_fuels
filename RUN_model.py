@@ -7,7 +7,7 @@ parser=argparse.ArgumentParser()
 
 parser.add_argument('--input_path', help='Set the input data path')
 parser.add_argument('--output_path', help='Set the output data path')
-parser.add_argument('--fuel', choices=['1,8-cineole', 'Bisabolene', 'Epi-isozizaene', 'Limonene', 'Linalool','Isopentenol'], help='Select your jetfuel')
+parser.add_argument('--fuel', choices=['1,8-cineole', 'Bisabolene', 'Epi-isozizaene', 'Limonene', 'Linalool','Isopentenol', 'All'], help='Select your jetfuel')
 parser.add_argument('--electricity', choices=['grid','net'], help='Select your electricity source')
 parser.add_argument('--optimal', choices=['True','False'], help='Select scenario')
 parser.add_argument('--model', choices=['GHG','WithWater','ConsWater'], help='Select GHG or Water run')
@@ -17,7 +17,10 @@ args=parser.parse_args()
 if not os.path.exists(args.output_path):
     os.makedirs(args.output_path)
 
-fuels = [args.fuel]
+if args.fuel == 'All':
+    fuels = ['1,8-cineole', 'Bisabolene', 'Epi-isozizaene', 'Limonene', 'Linalool']
+else:
+    fuels = [args.fuel]
 
 if args.optimal=='True':
     processes = ['Optimal']
@@ -54,24 +57,6 @@ all_results = pd.DataFrame(columns = columns)
 for process in processes:
     for IL in ILs:
         for fuel in fuels:
-            if fuel == '1,8-cineole': 
-                hhv_jet_fuel = 46.6
-                density_jet_fuel = 0.922
-            if fuel == 'Bisabolene': 
-                hhv_jet_fuel = 46.68
-                density_jet_fuel = 0.879
-            if fuel == 'Epi-isozizaene': 
-                hhv_jet_fuel = 46.68
-                density_jet_fuel = 0.879
-            if fuel == 'Limonene': 
-                hhv_jet_fuel = 45.04
-                density_jet_fuel = 0.841
-            if fuel == 'Linalool': 
-                hhv_jet_fuel = 42.18
-                density_jet_fuel = 0.858
-            if fuel == 'Isopentenol': 
-                hhv_jet_fuel = 37.3
-                density_jet_fuel = 0.81
             for scenario in scenarios:
                 if args.optimal == 'False':
                     path = args.input_path + '/scenarios/SuperPro_data_{}_{}_{}_{}.js'.format(process, IL, fuel, scenario)
